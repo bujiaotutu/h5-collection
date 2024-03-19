@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>碰撞检测游戏</title>
+    <style>
+        #game-container {
+            width: 400px;
+            height: 400px;
+            border: 1px solid black;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .item {
+            width: 40px;
+            height: 40px;
+            background-color: blue;
+            position: absolute;
+        }
+
+        #player {
+            width: 40px;
+            height: 70px;
+            background-color: red;
+            position: absolute;
+            bottom: 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="score">Score: 0</div>
+    <div id="gameLength">GameLength: 30</div>
+    <div id="game-container">
+        <div id="player"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script>
+        /***
+         * @param {Array} itemAttribute 物品属性
+         * @param {Function} proportion 随机数比例
+         * @param {Number} itemSpeed 物品速度
+         * @param {String} containerId 游戏容器id
+         * @param {Number} gameLength 游戏长度
+         */
+        class Game {
+            constructor(itemAttribute, proportion, itemSpeed, containerId, gameLength) {
+                this.itemSpeed = itemSpeed;
+                this.itemAttribute = itemAttribute;
+                this.proportion = proportion;
+                this.container = $(containerId);
+                this.gameLength = gameLength;
+                this.itemMap = new Map();
+                this.score = 0;
+                this.count = 0;
+            }
+
+            start() {
+                this.countdown();
+                this.spawnItems();
+                this.movePlayer();
+                this.checkCollision();
+            }
+
+            countdown() {
+                let _that = this;
+                let startTime = performance.now();
+                let timerInterval = null;
+                $('#gameLength').text('GameLength: ' + this.gameLength)
+                this.startTime = performance.now();
+                this.timerInterval = requestAnimationFrame(updateTimer);
+                
+                function updateTimer(timestamp) {
+                    let elapsedTime = timestamp - startTime;
+                    let remainingTime = _that.gameLength * 1000 - elapsedTime;
+                    let ceilTime = _.ceil(remainingTime / 1000, 0)
+                    if (ceilTime == 0) {
+                        _that.timerInterval = null
+                        _that.stop()
+                    } else {
+                        // 继续请求下一帧
+                        _that.timerInterval = requestAnimationFrame(updateTimer);
+                    }
+                    ceilTime != _that.gameLength ? $('#gameLength').text('GameLength: ' + ceilTime) : ''
+                }
+            }
+
+            spawnItems() {
+                this.itemTimer = setInterval(() => {
+                    const itemId = 'item-' + this.count;
+                    this.count++;
+                    this.itemMap.set(itemId, this.itemAttribute[this.proportion(_.random(0, 10))]);
+                    const item = $('<div class="item" id="' + itemId + '"></div>').css({
+                        left: Math.random() * (this.container.width() - 20),
+                        top: 0,
+                        background: this.itemMap.get(itemId).img
+                    });
+                    this.container.append(item);
+                    item.animate({
+                        top: this.container.height() + 40
+                    }, this.itemSpeed, () => {
+                        item.remove();
+                    });
+                }, 375);
+            }
+
+            movePlayer() {
+                let isDragging = false;
+                let playerStartX = 0;
+                let maxLeft = this.container.width() - $('#player').width();
+                let minLeft = 0;
+
+                $('#player').on('mousedown touchstart', (e) => {
+                    isDragging = true;
+                    playerStartX = e.clientX || e.originalEvent.touches[0].clientX || 0;
+                });
+
+                $(document).on('mouseup touchend', () => {
+                    isDragging = false;
+                });
+
+                $(document).on('mousemove touchmove', (e) => {
+                    if (isDragging) {
+                        const clientX = e.clientX || e.originalEvent.touches[0].clientX;
+                        const deltaX = clientX - playerStartX;
+                        const newLeft = $('#player').position().left + deltaX;
+                        $('#player').css('left', newLeft < minLeft ? minLeft : newLeft > maxLeft ? maxLeft : newLeft);
+                        playerStartX = clientX;
+                    }
+                });
+            }
+
+            checkCollision() {
+                setInterval(() => {
+                    $('.item').each((index, element) => {
+                        const item = $(element);
+                        const player = $('#player');
+                        if (this.isColliding(item, player)) {
+                            item.remove();
+                            this.score = this.itemMap.get(item[0].id).collideRule(this.score)
+                            this.itemMap.delete(item[0].id);
+                            $('#score').text('Score: ' + this.score);
+                        }
+                    });
+                }, 100);
+            }
+
+            isColliding(item, player) {
+                const itemPos = item.offset();
+                const playerPos = player.offset();
+                return !(itemPos.left + item.width() < playerPos.left ||
+                    itemPos.left > playerPos.left + player.width() ||
+                    itemPos.top + item.height() < playerPos.top ||
+                    itemPos.top > playerPos.top + player.height());
+            }
+
+            stop() {
+                clearInterval(this.itemTimer);
+                $('#player').off();
+                $('#item').stop();
+            }
+        }
+
+        $(document).ready(() => {
+            const itemAttribute = [
+                {
+                    img: 'green',
+                    collideRule: (num) => { return num + 5 }
+                },
+                {
+                    img: 'red',
+                    collideRule: (num) => { return num + 10 }
+                },
+                {
+                    img: 'black',
+                    collideRule: (num) => { return num - 5 < 0 ? 0 : num - 5 }
+                },
+            ];
+            function proportion(num) {
+                if (0 <= num && num <= 5) {
+                    return 0;
+                } else if (5 < num && num <= 8) {
+                    return 1;
+                } else {
+                    return 2;
+                }
+            }
+            const game = new Game(itemAttribute, proportion, 2000, '#game-container', 30);
+            game.start();
+        });
+    </script>
+
+</body>
+
+</html>
