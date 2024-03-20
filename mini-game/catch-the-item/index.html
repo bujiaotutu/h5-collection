@@ -7,7 +7,7 @@
     <title>碰撞检测游戏</title>
     <style>
         #game-container {
-            width: 400px;
+            width: 80%;
             height: 400px;
             border: 1px solid black;
             position: relative;
@@ -116,16 +116,16 @@
                 let maxLeft = this.container.width() - $('#player').width();
                 let minLeft = 0;
 
-                $('#player').on('mousedown touchstart', (e) => {
+                $('#player').on('touchstart', (e) => {
                     isDragging = true;
                     playerStartX = e.clientX || e.originalEvent.touches[0].clientX || 0;
                 });
 
-                $(document).on('mouseup touchend', () => {
+                $(document).on('touchend', () => {
                     isDragging = false;
                 });
 
-                $(document).on('mousemove touchmove', (e) => {
+                $(document).on('touchmove', (e) => {
                     if (isDragging) {
                         const clientX = e.clientX || e.originalEvent.touches[0].clientX;
                         const deltaX = clientX - playerStartX;
