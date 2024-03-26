@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Video Cover</title>
+</head>
+
+<body>
+
+    <!-- 视频元素 -->
+    <video id="video" src="./ces2.mp4" controls width="400" height="300"></video>
+    <img src="#" id="image">
+    <canvas id="canvas" width="400" height="300"></canvas>
+
+    <script>
+        function getVideoCover(videoElement,frameIndex, callback) {
+            // 创建一个 Canvas 元素
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            videoElement.addEventListener('loadedmetadata', function () {
+                console.log('loadedmetadata');
+                // 计算视频的帧率
+                const fps = video.readyState > 0 ? video.playbackRate : 30; // 默认帧率为 30
+                const duration = video.duration;
+                const targetTime = frameIndex / fps;
+
+                // 定位到目标时间点
+                video.currentTime = Math.min(targetTime, duration);
+            })
+            // 监听视频加载事件
+            videoElement.addEventListener('seeked', function (e) {
+
+                // 将视频的当前帧绘制到 Canvas 上
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                // 获取 Canvas 中的图像数据
+                const coverDataUrl = canvas.toDataURL('image/jpeg');
+                const coverImage = document.getElementById('image');
+                coverImage.src = coverDataUrl;
+
+                // 执行回调函数，将封面图片的 Data URL 作为参数传递
+                callback(coverDataUrl);
+            });
+        }
+
+        // 使用示例
+        const video = document.getElementById('video');
+        getVideoCover(video, 2, function (coverDataUrl) {
+            console.log('视频封面：', coverDataUrl);
+        });
+    </script>
+
+</body>
+
+</html>
